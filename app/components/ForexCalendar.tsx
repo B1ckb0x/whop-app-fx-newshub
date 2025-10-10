@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, TrendingUp, Filter, Settings } from 'lucide-react';
 
