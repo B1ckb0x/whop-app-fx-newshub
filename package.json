@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "whop-proxy --command 'next dev --turbopack'",
+		"dev": "whop-proxy --command=\"next dev --turbopack\"",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint"
@@ -12,6 +12,9 @@
 		"@vercel/functions": "^2.0.3",
 		"@whop/api": "^0.0.50",
 		"@whop/react": "0.2.36",
+		"axios": "^1.12.2",
+		"date-fns": "^4.1.0",
+		"lucide-react": "^0.545.0",
 		"next": "15.3.2",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"
@@ -22,7 +25,7 @@
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
-		"@whop-apps/dev-proxy": "0.0.1-canary.116",
+		"@whop-apps/dev-proxy": "0.0.1-canary.115",
 		"dotenv-cli": "^8.0.0",
 		"tailwindcss": "^4",
 		"typescript": "^5"
