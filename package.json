@@ -12,7 +12,7 @@
 		"@supabase/supabase-js": "^2.75.0",
 		"@vercel/functions": "^2.0.3",
 		"@whop/api": "^0.0.50",
-		"@whop/react": "0.2.36",
+		"@whop/react": "^0.2.46",
 		"axios": "^1.12.2",
 		"cheerio": "^1.1.2",
 		"date-fns": "^4.1.0",
