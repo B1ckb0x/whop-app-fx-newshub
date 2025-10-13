@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateToken } from '@whop-apps/sdk';
+import { whopSdk } from '@/lib/whop-sdk';
 
 export async function GET(request: Request) {
   try {
@@ -18,18 +19,56 @@ export async function GET(request: Request) {
       headers: request.headers 
     });
     
-    // Get access level from validated result - use default if not available
-    const accessLevel = 'member'; // Default role since we can't determine from result
+    if (!result.userId) {
+      console.log('No userId found in validation result');
+      return NextResponse.json({ role: 'member', userId: null });
+    }
     
-    console.log('User validated:', {
-      userId: result.userId,
-      accessLevel: accessLevel
-    });
-    
-    return NextResponse.json({ 
-      role: accessLevel,
-      userId: result.userId
-    });
+    // Check user's access level to the experience
+    try {
+      const experienceId = process.env.NEXT_PUBLIC_WHOP_EXPERIENCE_ID;
+      
+      if (!experienceId) {
+        console.log('No experience ID configured');
+        return NextResponse.json({ 
+          role: 'member',
+          userId: result.userId
+        });
+      }
+      
+      const accessResult = await whopSdk.access.checkIfUserHasAccessToExperience({
+        userId: result.userId,
+        experienceId: experienceId
+      });
+      
+      // Map Whop access levels to our role system
+      let userRole = 'member';
+      if (accessResult.accessLevel === 'admin') {
+        userRole = 'admin';
+      } else if (accessResult.accessLevel === 'customer') {
+        userRole = 'member';
+      } else {
+        userRole = 'member'; // no_access or other cases
+      }
+      
+      console.log('User access checked:', {
+        userId: result.userId,
+        accessLevel: accessResult.accessLevel,
+        role: userRole
+      });
+      
+      return NextResponse.json({ 
+        role: userRole,
+        userId: result.userId
+      });
+    } catch (sdkError) {
+      console.error('Error checking user access:', sdkError);
+      // Fallback to member if we can't check access
+      return NextResponse.json({ 
+        role: 'member',
+        userId: result.userId
+      });
+    }
     
   } catch (error) {
     console.error('Error validating user:', error);

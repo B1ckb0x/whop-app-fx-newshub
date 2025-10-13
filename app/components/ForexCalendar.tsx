@@ -1140,12 +1140,6 @@ export default function ForexCalendar() {
                 <h1 className="text-2xl font-bold">FX NewsHub</h1>
                 <p className="text-sm text-slate-400">Economic Calendar</p>
               </div>
-              {/* Debug Badge - Remove in production */}
-              {userRole && (
-                <div className="ml-3 px-2 py-1 bg-slate-700 rounded text-xs">
-                  {userRole}
-                </div>
-              )}
             </div>
             {isAdmin && (
               <button 
