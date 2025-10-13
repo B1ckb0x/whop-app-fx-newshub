@@ -9,6 +9,12 @@ export async function GET(request: Request) {
     // Get token from URL params - Whop passes this
     const token = searchParams.get('whop_token') || '';
     
+    console.log('=== USER ROLE API DEBUG ===');
+    console.log('Token found:', !!token);
+    console.log('Experience ID:', process.env.NEXT_PUBLIC_WHOP_EXPERIENCE_ID);
+    console.log('App ID:', process.env.NEXT_PUBLIC_WHOP_APP_ID);
+    console.log('API Key set:', !!process.env.WHOP_API_KEY);
+    
     if (!token) {
       console.log('No Whop token found');
       return NextResponse.json({ role: 'member', userId: null });
@@ -24,37 +30,54 @@ export async function GET(request: Request) {
       return NextResponse.json({ role: 'member', userId: null });
     }
     
-    // Check user's access level to the experience
+    // Check user's role in the company
     try {
-      const experienceId = process.env.NEXT_PUBLIC_WHOP_EXPERIENCE_ID;
+      const companyId = process.env.NEXT_PUBLIC_WHOP_COMPANY_ID;
       
-      if (!experienceId) {
-        console.log('No experience ID configured');
+      if (!companyId) {
+        console.log('No company ID configured');
         return NextResponse.json({ 
           role: 'member',
           userId: result.userId
         });
       }
       
-      const accessResult = await whopSdk.access.checkIfUserHasAccessToExperience({
+      // Get user details to check their role
+      const user = await whopSdk.users.getUser({ userId: result.userId });
+      
+      console.log('User details:', {
         userId: result.userId,
-        experienceId: experienceId
+        userName: user.name,
+        companyId: companyId
       });
       
-      // Map Whop access levels to our role system
+      // Use Whop's actual user_type_id system for proper role detection
       let userRole = 'member';
-      if (accessResult.accessLevel === 'admin') {
+      
+      // Check user_type_id from Whop's API
+      // 100: Staff, 200: Approver, 210: Approver plus add, 220: Approver plus add edit cancel
+      // 300: Super user, 310: Super user with staff hub
+      const adminUserTypes = [200, 210, 220, 300, 310];
+      
+      // Get user_type_id from the user object
+      const userTypeId = (user as any).user_type_id;
+      
+      if (userTypeId && adminUserTypes.includes(userTypeId)) {
         userRole = 'admin';
-      } else if (accessResult.accessLevel === 'customer') {
-        userRole = 'member';
-      } else {
-        userRole = 'member'; // no_access or other cases
       }
       
-      console.log('User access checked:', {
+      console.log('Whop role detection:', {
         userId: result.userId,
-        accessLevel: accessResult.accessLevel,
-        role: userRole
+        userName: user.name,
+        userTypeId: userTypeId,
+        isAdmin: adminUserTypes.includes(userTypeId),
+        finalRole: userRole
+      });
+      
+      console.log('User role determined:', {
+        userId: result.userId,
+        role: userRole,
+        userName: user.name
       });
       
       return NextResponse.json({ 
@@ -62,8 +85,8 @@ export async function GET(request: Request) {
         userId: result.userId
       });
     } catch (sdkError) {
-      console.error('Error checking user access:', sdkError);
-      // Fallback to member if we can't check access
+      console.error('Error checking user role:', sdkError);
+      // Fallback to member if we can't check role
       return NextResponse.json({ 
         role: 'member',
         userId: result.userId

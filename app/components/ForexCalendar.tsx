@@ -1042,10 +1042,13 @@ export default function ForexCalendar() {
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
+        console.log('=== FETCHING USER ROLE ===');
         const response = await fetch('/api/user-role');
         const data = await response.json();
+        console.log('User role API response:', data);
         setUserRole(data.role || 'member');
         setIsAdmin(data.role === 'admin' || data.role === 'owner');
+        console.log('Is admin:', data.role === 'admin' || data.role === 'owner');
       } catch (error) {
         console.error('Failed to fetch user role:', error);
         setIsAdmin(false);
@@ -1139,6 +1142,11 @@ export default function ForexCalendar() {
               <div>
                 <h1 className="text-2xl font-bold">FX NewsHub</h1>
                 <p className="text-sm text-slate-400">Economic Calendar</p>
+              </div>
+              {/* Debug Info - Remove in production */}
+              <div className="ml-4 px-3 py-1 bg-slate-700 rounded text-xs">
+                <div>Role: {userRole || 'loading...'}</div>
+                <div>Admin: {isAdmin ? 'Yes' : 'No'}</div>
               </div>
             </div>
             {isAdmin && (
