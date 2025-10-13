@@ -181,14 +181,19 @@
 //     // Filter to show only forex-relevant currencies unless "Show All" is enabled
 //     const isForexRelevant = showAllEvents || majorForexCurrencies.includes(event.currency);
     
-//     return matchesDate && matchesImpact && matchesCurrency && isForexRelevant;
+//     // By default, only show medium and high impact events (yellow, orange, red)
+//     // Show low impact (green) only when "Show All Events" is enabled
+//     const isRelevantImpact = showAllEvents || event.impact === 'medium' || event.impact === 'high';
+    
+//     return matchesDate && matchesImpact && matchesCurrency && isForexRelevant && isRelevantImpact;
 //   });
 
 //   const getEventsForDate = (date: Date) => {
 //     const dateStr = formatDate(date);
 //     return adjustedEvents.filter(event => {
 //       const isForexRelevant = showAllEvents || majorForexCurrencies.includes(event.currency);
-//       return event.adjusted_date === dateStr && isForexRelevant;
+//       const isRelevantImpact = showAllEvents || event.impact === 'medium' || event.impact === 'high';
+//       return event.adjusted_date === dateStr && isForexRelevant && isRelevantImpact;
 //     });
 //   };
 
@@ -427,11 +432,11 @@
 
 
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, TrendingUp, Filter, Settings, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
+import { Calendar, Clock, TrendingUp, Filter, Settings, ChevronLeft, ChevronRight, Globe, AlertCircle } from 'lucide-react';
+import { useIframeSdk } from '@whop/react';
 
 interface ForexEvent {
   id: number;
@@ -489,6 +494,7 @@ const getDateLabel = (date: Date) => {
 };
 
 export default function ForexCalendar() {
+  const sdk = useIframeSdk();
   const [selectedDay, setSelectedDay] = useState(formatDate(new Date()));
   const [filterImpact, setFilterImpact] = useState('all');
   const [filterCurrency, setFilterCurrency] = useState('all');
@@ -496,10 +502,14 @@ export default function ForexCalendar() {
   const [messageTime, setMessageTime] = useState('08:00');
   const [allEvents, setAllEvents] = useState<ForexEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [timezone, setTimezone] = useState('UTC');
   const [showAllEvents, setShowAllEvents] = useState(false);
   const weekDates = getWeekDates(weekOffset);
+
+  // For now, show settings to all users - you can implement proper auth later
+  const isAdmin = true;
 
   const handlePreviousWeek = () => {
     setWeekOffset(prev => prev - 1);
@@ -573,11 +583,23 @@ export default function ForexCalendar() {
     const fetchEvents = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await fetch('/api/events');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        
         const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
         setAllEvents(data.events || []);
-      } catch (error) {
-        console.error('Failed to fetch events:', error);
+      } catch (err) {
+        console.error('Failed to fetch events:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load events');
       } finally {
         setLoading(false);
       }
@@ -642,12 +664,14 @@ export default function ForexCalendar() {
                 <p className="text-sm text-slate-400">Economic Calendar</p>
               </div>
             </div>
-            <button 
-              onClick={() => setShowSettings(!showSettings)}
-              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -795,6 +819,18 @@ export default function ForexCalendar() {
             <div className="text-center py-12 bg-slate-800/50 rounded-xl">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-3"></div>
               <p className="text-slate-400">Loading events...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 bg-red-900/20 border border-red-500/50 rounded-xl">
+              <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-500" />
+              <p className="text-red-400 font-semibold mb-2">Failed to Load Events</p>
+              <p className="text-slate-400 text-sm mb-4">{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="text-center py-12 bg-slate-800/50 rounded-xl">
